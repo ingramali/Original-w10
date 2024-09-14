@@ -5,7 +5,7 @@ on:
 jobs:
   create_rdp:
     runs-on: windows-latest
-    timeout-minutes: 1440 # This is 24 hours
+    timeout-minutes: 1440  # Run for 24 hours
     env:
       NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
 
@@ -22,6 +22,19 @@ jobs:
       
       - name: Set up Ngrok with your account
         run: .\ngrok.exe authtoken $Env:NGROK_AUTH_TOKEN
+        env:
+          NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+
+      - name: Create Ngrok configuration file for RDP tunnel
+        run: |
+          Add-Content -Path ngrok.yml -Value @"
+          version: 2
+          authtoken: $Env:NGROK_AUTH_TOKEN
+          tunnels:
+            rdp_tunnel:
+              proto: tcp
+              addr: 3389
+          "@
         env:
           NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
       
@@ -46,12 +59,14 @@ jobs:
       
       - name: Start Ngrok tunnel for RDP
         run: |
-          # Start Ngrok to expose the RDP port
-          .\ngrok.exe tcp 3389
+          # Start Ngrok with the configuration file for tunneling RDP
+          .\ngrok.exe start --all --config ngrok.yml
         id: ngrok_tunnel
 
-      - name: Show Ngrok public URL
-        run: echo "Ngrok RDP URL: ${{ steps.ngrok_tunnel.outputs.public_url }}"
+      - name: Display Ngrok public URL for RDP
+        run: |
+          $ngrok_url = (Invoke-RestMethod -Uri "http://127.0.0.1:4040/api/tunnels").tunnels[0].public_url
+          Write-Host "Ngrok RDP URL: $ngrok_url"
       
       - name: Start RDP Session
         run: cmd /c NGROK-CHECK.bat
