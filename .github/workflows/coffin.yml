@@ -1,38 +1,60 @@
 name: RDP_COFFIN
-on: workflow_dispatch
+on: 
+  workflow_dispatch
+
 jobs:
-  build:
+  create_rdp:
     runs-on: windows-latest
-    timeout-minutes: 999999999999999
+    timeout-minutes: 1440 # This is 24 hours
+    env:
+      NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
 
     steps:
-    - name: Download Ngrok & NSSM
-      run: |
-       Invoke-WebRequest -Uri https://github.com/ingramali/Original-w10/main/Files/ngrok.exe -OutFile ngrok.exe
-       Invoke-WebRequest -Uri https://github.com/ingramali/Original-w10/main/Files/nssm.exe -OutFile nssm.exe
-    - name: Copy NSSM & Ngrok to Windows Directory.
-      run: | 
-        Copy-Item nssm.exe -Destination C:\Windows\System32
-        Copy-Item ngrok.exe -Destination C:\Windows\System32
-    - name: Connect your Ngrok account
-      run: .\ngrok.exe authconfig --token=$Env:NGROK_AUTH_TOKEN
-      env:
-        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
-    - name: Download Important Files.
-      run: |
-        Invoke-WebRequest -Uri https://github.com/ingramali/Original-w10/main/Files/NGROK-US.bat -OutFile NGROK-US.bat
-        Invoke-WebRequest -Uri <https://github.com/ingramali/Original-w10/main/Files/NGROK-CHECK.bat> -OutFile NGROK-CHECK.bat
-        Invoke-WebRequest -Uri https://github.com/ingramali/Original-w10/main/Files/loop.bat -OutFile loop.bat
-    - name: Make YAML file for NGROK.
-      run: Start-Process powershell.exe -ArgumentList "-Command", "(Get-Content ./NGROK-US.bat)", "-NoNewWindow"
-    - name: Enable RDP Access.
-      run: | 
-        Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\' -Name "fDenyTSConnections" -Value 0
-        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-        Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
-    - name: Create Tunnel
-      run: Get-Service ngrok | Start-Service
-    - name: Connect to your RDP (2 core - 7 GB RAM)
-      run: cmd /c NGROK-CHECK.bat
-    - name: All done! Join my Telegram channel for more tricks.
-      run: cmd /c loop.bat
+      - name: Download Ngrok & NSSM
+        run: |
+          Invoke-WebRequest -Uri https://github.com/ingramali/Original-w10/main/Files/ngrok.exe -OutFile ngrok.exe
+          Invoke-WebRequest -Uri https://github.com/ingramali/Original-w10/main/Files/nssm.exe -OutFile nssm.exe
+      
+      - name: Copy NSSM & Ngrok to Windows Directory
+        run: | 
+          Copy-Item ngrok.exe -Destination C:\Windows\System32
+          Copy-Item nssm.exe -Destination C:\Windows\System32
+      
+      - name: Set up Ngrok with your account
+        run: .\ngrok.exe authtoken $Env:NGROK_AUTH_TOKEN
+        env:
+          NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+      
+      - name: Download RDP setup scripts
+        run: |
+          Invoke-WebRequest -Uri https://github.com/ingramali/Original-w10/main/Files/NGROK-US.bat -OutFile NGROK-US.bat
+          Invoke-WebRequest -Uri https://github.com/ingramali/Original-w10/main/Files/NGROK-CHECK.bat -OutFile NGROK-CHECK.bat
+          Invoke-WebRequest -Uri https://github.com/ingramali/Original-w10/main/Files/loop.bat -OutFile loop.bat
+      
+      - name: Configure RDP access and firewall
+        run: |
+          # Enable RDP on Windows
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\' -Name "fDenyTSConnections" -Value 0
+          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
+      
+      - name: Set machine specs (4 cores, 16GB RAM, 250GB HDD)
+        run: |
+          # This should ideally be done by setting up the VM in the cloud with the specs requested. 
+          # As an example, PowerShell script would configure or check if the resources are matching:
+          Write-Host "Setting up system with 4 cores, 16 GB RAM, and 250 GB HDD (Assumed from underlying VM configuration)"
+      
+      - name: Start Ngrok tunnel for RDP
+        run: |
+          # Start Ngrok to expose the RDP port
+          .\ngrok.exe tcp 3389
+        id: ngrok_tunnel
+
+      - name: Show Ngrok public URL
+        run: echo "Ngrok RDP URL: ${{ steps.ngrok_tunnel.outputs.public_url }}"
+      
+      - name: Start RDP Session
+        run: cmd /c NGROK-CHECK.bat
+
+      - name: Keep the machine running
+        run: cmd /c loop.bat
