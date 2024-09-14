@@ -23,16 +23,23 @@ echo ----------------------------------------------
 echo User: Administrator
 echo Pass: @duiwel04
 
-:: Fetch Ngrok tunnel URL if running
+:: Start Ngrok for RDP
+echo Starting Ngrok tunnel for RDP...
+start ngrok tcp 3389 --authtoken 2TRMWMn5NZpNQuySQQKVZ8d8hfS_44VbRWTy7JCjzCNvNkHXo
+
+:: Wait a bit for Ngrok to establish the tunnel
+timeout /t 10 >nul
+
+:: Fetch Ngrok tunnel URL
 echo Fetching Ngrok tunnel URL...
 tasklist | find /i "ngrok.exe" >nul && (
-    curl -s localhost:4040/api/tunnels | jq -r .tunnels[0].public_url
+    curl -s http://127.0.0.1:4040/api/tunnels | jq -r .tunnels[0].public_url
 ) || (
-    echo "Can't get NGROK tunnel. Ensure NGROK_AUTH_TOKEN is correct in Settings > Secrets > Repository secret."
+    echo "Can't get NGROK tunnel. Ensure NGROK_AUTH_TOKEN is correct or Ngrok is running."
     echo "Maybe your previous VM is still running: https://dashboard.ngrok.com/status/tunnels"
 )
 
-:: Download various utilities
+:: Download necessary utilities
 echo Downloading necessary utilities...
 curl -O https://raw.githubusercontent.com/c9ffin/rdp/main/Files/DisablePasswordComplexity.ps1 >> out.txt 2>&1
 curl -o "C:\Users\Public\Desktop\Fast Config VPS.exe" https://raw.githubusercontent.com/ingramali/W10_RDP/main/Files/FastConfigVPS_v5.1.exe >> out.txt 2>&1
