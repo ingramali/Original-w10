@@ -6,8 +6,6 @@ jobs:
   create_rdp:
     runs-on: windows-latest
     timeout-minutes: 1440  # Run for 24 hours
-    env:
-      NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
 
     steps:
       - name: Download Ngrok & NSSM
@@ -20,23 +18,21 @@ jobs:
           Copy-Item ngrok.exe -Destination C:\Windows\System32
           Copy-Item nssm.exe -Destination C:\Windows\System32
       
-      - name: Set up Ngrok with your account
-        run: .\ngrok.exe authtoken $Env:NGROK_AUTH_TOKEN
-        env:
-          NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
-
+      - name: Set Ngrok Auth Token
+        run: |
+          # Replace 'YOUR_NGROK_AUTH_TOKEN' with the actual auth token
+          .\ngrok.exe authtoken 2TRMWMn5NZpNQuySQQKVZ8d8hfS_44VbRWTy7JCjzCNvNkHXo
+      
       - name: Create Ngrok configuration file for RDP tunnel
         run: |
           Add-Content -Path ngrok.yml -Value @"
           version: 2
-          authtoken: $Env:NGROK_AUTH_TOKEN
+          authtoken: 2TRMWMn5NZpNQuySQQKVZ8d8hfS_44VbRWTy7JCjzCNvNkHXo
           tunnels:
             rdp_tunnel:
               proto: tcp
               addr: 3389
           "@
-        env:
-          NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
       
       - name: Download RDP setup scripts
         run: |
